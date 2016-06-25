@@ -8,6 +8,8 @@ import (
 	"os"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/html"
 	"github.com/unrolled/render"
 	"github.com/urfave/cli"
 )
@@ -50,6 +52,8 @@ func main() {
 					DisableHTTPErrorRendering: false,
 					IsDevelopment:             true,
 				})
+				m := minify.New()
+				m.Add("text/html", &html.Minifier{KeepDefaultAttrVals: true, KeepWhitespace: true})
 				compile := func() error {
 					for _, fn := range fns {
 						log.Println("compile " + fn)
@@ -58,7 +62,11 @@ func main() {
 							log.Println(err)
 							return err
 						}
-						ioutil.WriteFile(out+"/"+fn+".html", b.Bytes(), 0644)
+						s, err := m.Bytes("text/html", b.Bytes())
+						if err != nil {
+							s = b.Bytes()
+						}
+						ioutil.WriteFile(out+"/"+fn+".html", s, 0644)
 					}
 					return nil
 				}
