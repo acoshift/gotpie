@@ -53,7 +53,7 @@ func main() {
 					IsDevelopment:             true,
 				})
 				m := minify.New()
-				m.Add("text/html", &html.Minifier{KeepDefaultAttrVals: true, KeepWhitespace: true})
+				m.Add("text/html", &html.Minifier{KeepDefaultAttrVals: true})
 				compile := func() error {
 					for _, fn := range fns {
 						log.Println("compile " + fn)
