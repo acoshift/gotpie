@@ -43,7 +43,7 @@ func main() {
 			Action: func(c *cli.Context) error {
 				dir := c.String("dir")
 				out := c.String("out")
-				fn := c.Args().First()
+				fns := c.Args()
 				r := render.New(render.Options{
 					Layout:                    c.String("layout"),
 					Directory:                 dir,
@@ -51,11 +51,15 @@ func main() {
 					IsDevelopment:             true,
 				})
 				compile := func() error {
-					b := writer{}
-					if err := r.HTML(&b, 0, fn, nil); err != nil {
-						return err
+					for _, fn := range fns {
+						log.Println("compile " + fn)
+						b := writer{}
+						if err := r.HTML(&b, 0, fn, nil); err != nil {
+							log.Println(err)
+							return err
+						}
+						ioutil.WriteFile(out+"/"+fn+".html", b.Bytes(), 0644)
 					}
-					ioutil.WriteFile(out+"/"+fn+".html", b.Bytes(), 0644)
 					return nil
 				}
 
