@@ -8,7 +8,7 @@
 
 ### Usage
 
-`gotpie --watch --minify --out build src`
+`gotpie compile --watch --minify --out build src`
 
 gotpie will compile all of .html files in src folder into build folder
 
@@ -23,7 +23,7 @@ Project structure
   - index.html
   - about.html
 
-`gotpie --layout layout --out build src`
+`gotpie compile --layout layout --out build src`
 
 Result
 
