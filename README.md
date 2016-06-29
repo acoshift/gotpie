@@ -20,8 +20,8 @@ Project structure
   - footer.tmpl
   - layout.tmpl
   - menu.tmpl
-  - index.html
-  - about.html
+  - index.entry.tmpl
+  - about.entry.tmpl
 
 `gotpie compile --layout layout --out build src`
 

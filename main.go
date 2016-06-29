@@ -50,7 +50,7 @@ func main() {
 				r := render.New(render.Options{
 					Layout:                    c.String("layout"),
 					Directory:                 dir,
-					Extensions:                []string{".tmpl", ".html"},
+					Extensions:                []string{".tmpl"},
 					DisableHTTPErrorRendering: false,
 					IsDevelopment:             true,
 				})
@@ -58,10 +58,11 @@ func main() {
 				m.Add("text/html", &html.Minifier{KeepDefaultAttrVals: true})
 				compile := func() error {
 					var err error
-					fns, _ := filepath.Glob(filepath.Join(dir, "*.html"))
+					fns, _ := filepath.Glob(filepath.Join(dir, "*.entry.tmpl"))
 					for _, fn := range fns {
 						fn, _ = filepath.Rel(dir, fn)
-						fn = strings.TrimSuffix(fn, filepath.Ext(fn))
+						fn = strings.TrimSuffix(fn, filepath.Ext(fn))  // trim .tmpl
+						fo := strings.TrimSuffix(fn, filepath.Ext(fn)) // trim .entry
 						log.Println("compile " + fn)
 						b := writer{}
 						if err = r.HTML(&b, 0, fn, nil); err != nil {
@@ -75,7 +76,7 @@ func main() {
 								s = b.Bytes()
 							}
 						}
-						ioutil.WriteFile(filepath.Join(out, fn+".html"), s, 0644)
+						ioutil.WriteFile(filepath.Join(out, fo+".html"), s, 0644)
 					}
 					return nil
 				}
