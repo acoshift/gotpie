@@ -8,9 +8,9 @@
 
 ### Usage
 
-`gotpie compile --watch --minify --out build src`
+`gotpie compile --watch --out build src`
 
-gotpie will compile all of .html files in src folder into build folder
+gotpie will compile all of .entry.tmpl files in src folder into build folder
 
 ### Example
 
