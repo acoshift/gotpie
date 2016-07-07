@@ -4,14 +4,21 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"mime"
 	"net/http"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/tdewolff/minify"
+	"github.com/tdewolff/minify/css"
 	"github.com/tdewolff/minify/html"
+	"github.com/tdewolff/minify/js"
+	"github.com/tdewolff/minify/json"
+	"github.com/tdewolff/minify/svg"
+	"github.com/tdewolff/minify/xml"
 	"github.com/unrolled/render"
 	"github.com/urfave/cli"
 )
@@ -47,6 +54,7 @@ func main() {
 			Action: func(c *cli.Context) error {
 				dir := c.Args().First()
 				out := c.String("out")
+				os.MkdirAll(out, 0755)
 				r := render.New(render.Options{
 					Layout:                    c.String("layout"),
 					Directory:                 dir,
@@ -55,29 +63,57 @@ func main() {
 					IsDevelopment:             true,
 				})
 				m := minify.New()
-				m.Add("text/html", &html.Minifier{KeepDefaultAttrVals: true})
+				m.AddFunc("text/html", html.Minify)
+				m.AddFunc("text/css", css.Minify)
+				m.AddFunc("text/javascript", js.Minify)
+				m.AddFunc("image/svg+xml", svg.Minify)
+				m.AddFuncRegexp(regexp.MustCompile("[/+]json$"), json.Minify)
+				m.AddFuncRegexp(regexp.MustCompile("[/+]xml$"), xml.Minify)
 				compile := func() error {
-					var err error
-					fns, _ := filepath.Glob(filepath.Join(dir, "*.entry.tmpl"))
-					for _, fn := range fns {
-						fn, _ = filepath.Rel(dir, fn)
-						fn = strings.TrimSuffix(fn, filepath.Ext(fn))  // trim .tmpl
-						fo := strings.TrimSuffix(fn, filepath.Ext(fn)) // trim .entry
-						log.Println("compile " + fn)
-						b := writer{}
-						if err = r.HTML(&b, 0, fn, nil); err != nil {
-							log.Println(err)
+					filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+						if err != nil {
 							return err
 						}
-						s := b.Bytes()
-						if c.Bool("minify") {
-							s, err = m.Bytes("text/html", s)
-							if err != nil {
-								s = b.Bytes()
-							}
+						if info.IsDir() {
+							return nil
 						}
-						ioutil.WriteFile(filepath.Join(out, fo+".html"), s, 0644)
-					}
+
+						path, _ = filepath.Rel(dir, path)
+						fn := strings.TrimSuffix(path, filepath.Ext(path))
+						if filepath.Ext(path) == ".tmpl" && filepath.Ext(fn) == ".entry" {
+							fo := strings.TrimSuffix(fn, filepath.Ext(fn))
+							log.Println("compile", path)
+							b := writer{}
+							if err = r.HTML(&b, 0, fn, nil); err != nil {
+								log.Println(err)
+								return err
+							}
+							s := b.Bytes()
+							if c.Bool("minify") {
+								s, err = m.Bytes("text/html", s)
+								if err != nil {
+									s = b.Bytes()
+								}
+							}
+							ioutil.WriteFile(filepath.Join(out, fo+".html"), s, 0644)
+						} else if filepath.Ext(path) != ".tmpl" && filepath.Base(path)[0] != '.' {
+							log.Println("compile", path)
+							b, _ := ioutil.ReadFile(filepath.Join(dir, path))
+							if c.Bool("minify") {
+								mm := mime.TypeByExtension(filepath.Ext(path))
+								if mm != "" {
+									s, err := m.Bytes(mm, b)
+									if err == nil {
+										b = s
+									}
+								}
+							}
+							o := filepath.Join(out, path)
+							os.MkdirAll(filepath.Dir(o), 0755)
+							ioutil.WriteFile(o, b, 0644)
+						}
+						return nil
+					})
 					return nil
 				}
 
