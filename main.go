@@ -119,15 +119,33 @@ func main() {
 
 				if c.Bool("watch") {
 					w, err := fsnotify.NewWatcher()
-					defer w.Close()
 					if err != nil {
+						log.Println(err)
 						return err
 					}
-					w.Add(dir)
+					defer w.Close()
+					resetDir := func() {
+						w.Close()
+						w, _ = fsnotify.NewWatcher()
+						w.Add(dir)
+						filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+							if err != nil {
+								return err
+							}
+							if info.IsDir() {
+								w.Add(path)
+							}
+							return nil
+						})
+					}
+					resetDir()
 					compile()
 					for {
 						select {
 						case ev := <-w.Events:
+							if ev.Op == fsnotify.Create || ev.Op == fsnotify.Remove || ev.Op == fsnotify.Rename {
+								resetDir()
+							}
 							if ev.Op != fsnotify.Chmod {
 								compile()
 							}
