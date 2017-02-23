@@ -2,6 +2,8 @@ package main
 
 import (
 	"bytes"
+	ejson "encoding/json"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"mime"
@@ -61,6 +63,22 @@ func main() {
 					Extensions:                []string{".tmpl"},
 					DisableHTTPErrorRendering: false,
 					IsDevelopment:             true,
+					Funcs: []template.FuncMap{{
+						"json": func(filename string) interface{} {
+							bs, err := ioutil.ReadFile(filename)
+							if err != nil {
+								log.Println(err)
+								return nil
+							}
+							var v interface{}
+							err = ejson.Unmarshal(bs, &v)
+							if err != nil {
+								log.Println(err)
+								return nil
+							}
+							return v
+						}},
+					},
 				})
 				m := minify.New()
 				m.AddFunc("text/html", html.Minify)
